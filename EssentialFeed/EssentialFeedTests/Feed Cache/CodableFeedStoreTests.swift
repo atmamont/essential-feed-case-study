@@ -70,7 +70,7 @@ class CodableFeedStoreTests: XCTestCase {
         super.setUp()
         setupEmptyStoreState()
     }
-
+    
     override func tearDown() {
         super.tearDown()
         undoStoreSideEffects()
@@ -84,20 +84,9 @@ class CodableFeedStoreTests: XCTestCase {
     
     func test_retrieve_hasNoSideEffectsOnEmptyCache() {
         let sut = makeSUT()
-        let exp = expectation(description: "Wait for cache retrieval")
-        sut.retrieve { firstResult in
-            sut.retrieve { secondResult in
-                switch (firstResult, secondResult) {
-                case (.empty, .empty): break
-                default:
-                    XCTFail("Expected retrieving twice from empty cache delivers empty result, got \((firstResult, secondResult)) instead")
-                }
-                
-                exp.fulfill()
-            }
-        }
         
-        wait(for: [exp], timeout: 1.0)
+        expect(sut, toRetrieve: .empty)
+        expect(sut, toRetrieve: .empty)
     }
     
     func test_retrieve_afterInsertingToEmptyCacheDeliversValues() {
@@ -106,12 +95,10 @@ class CodableFeedStoreTests: XCTestCase {
         let timestamp = Date()
         
         let exp = expectation(description: "Wait for cache retrieval")
-        
         sut.insert(feed, timestamp: timestamp) { insertionError in
             XCTAssertNil(insertionError, "Expected feed to be inserted successfully")
             exp.fulfill()
         }
-        
         wait(for: [exp], timeout: 1.0)
         
         expect(sut, toRetrieve: .found(feed: feed, timestamp: timestamp))
@@ -123,29 +110,13 @@ class CodableFeedStoreTests: XCTestCase {
         let timestamp = Date()
         
         let exp = expectation(description: "Wait for cache retrieval")
-
         sut.insert(feed, timestamp: timestamp) { insertionError in
             XCTAssertNil(insertionError, "Expected feed to be inserted successfully")
-            
-            sut.retrieve { firstResult in
-                sut.retrieve { secondResult in
-                    switch (firstResult, secondResult) {
-                    case let (.found(firstFeed, firstTimestamp), .found(secondFeed, secondTimestamp)):
-                        XCTAssertEqual(feed, firstFeed)
-                        XCTAssertEqual(timestamp, firstTimestamp)
-                        
-                        XCTAssertEqual(feed, secondFeed)
-                        XCTAssertEqual(timestamp, secondTimestamp)
-                    default:
-                        XCTFail("Expected found results with feed \(feed) and timestamp \(timestamp), got \(firstResult) and \(secondResult) instead")
-                    }
-                    
-                    exp.fulfill()
-                }
-            }
+            exp.fulfill()
         }
-        
         wait(for: [exp], timeout: 1.0)
+        
+        expect(sut, toRetrieve: .found(feed: feed, timestamp: timestamp))
     }
 
     // MARK: - Helpers
