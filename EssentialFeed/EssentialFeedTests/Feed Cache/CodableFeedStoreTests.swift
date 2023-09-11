@@ -176,51 +176,6 @@ class CodableFeedStoreTests: XCTestCase, FailableFeedStoreSpecs {
         return sut
     }
     
-    private func expect(_ sut: FeedStore, toRetrieve expectedResult: RetrieveCachedFeedResult, file: StaticString = #file, line: UInt = #line) {
-        let exp = expectation(description: "Wait for cache retrieval")
-        
-        sut.retrieve { retrievedResult in
-            switch (expectedResult, retrievedResult) {
-            case (.empty, .empty),
-                (.failure, .failure): break
-                
-            case let (.found(expectedFeed, expectedTimestamp), .found(retrievedFeed, retrievedTimestamp)):
-                XCTAssertEqual(expectedFeed, retrievedFeed)
-                XCTAssertEqual(expectedTimestamp, retrievedTimestamp)
-                
-            default:
-                XCTFail("Expected \(expectedResult) result, got \(retrievedResult) instead", file: file, line: line)
-            }
-            
-            exp.fulfill()
-        }
-        
-        wait(for: [exp], timeout: 1.0)
-    }
-    
-    @discardableResult
-    func insert(_ cache: (feed: [LocalFeedImage], timestamp: Date), to sut: FeedStore) -> Error? {
-        var insertionError: Error?
-        let exp = expectation(description: "Wait for cache retrieval")
-        sut.insert(cache.feed, timestamp: cache.timestamp) { receivedInsertionError in
-            insertionError = receivedInsertionError
-            exp.fulfill()
-        }
-        wait(for: [exp], timeout: 1.0)
-        return insertionError
-    }
-    
-    @discardableResult
-    func deleteCache(from sut: FeedStore) -> Error? {
-        var deletionError: Error?
-        let exp = expectation(description: "Wait for cache deletion")
-        sut.deleteCachedFeed { error in
-            deletionError = error
-            exp.fulfill()
-        }
-        wait(for: [exp])
-        return deletionError
-    }
     
     private func testSpecificStoreURL() -> URL {
         cachesDirectory().appendingPathComponent("\(type(of: self)).store")
