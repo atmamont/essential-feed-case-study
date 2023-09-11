@@ -190,6 +190,15 @@ class CodableFeedStoreTests: XCTestCase {
         expect(sut, toRetrieve: .empty)
     }
 
+    func test_delete_deliversErrorOnDeletionError() {
+        let noDeletePermissonURL = cachesDirectory()
+        let sut = makeSUT(storeURL: noDeletePermissonURL)
+        
+        let deletionError = deleteCache(from: sut)
+        
+        XCTAssertNotNil(deletionError, "Expected cache deletion to fail for missing permissions store URL")
+    }
+
     // MARK: - Helpers
     
     private func makeSUT(storeURL: URL? = nil, file: StaticString = #file, line: UInt = #line) -> CodableFeedStore {
@@ -245,11 +254,15 @@ class CodableFeedStoreTests: XCTestCase {
     }
     
     private func testSpecificStoreURL() -> URL {
-        FileManager.default.urls(
-            for: .cachesDirectory,
-            in: .userDomainMask).first!.appendingPathComponent("\(type(of: self)).store")
+        cachesDirectory().appendingPathComponent("\(type(of: self)).store")
     }
     
+    private func cachesDirectory() -> URL {
+        FileManager.default.urls(
+            for: .cachesDirectory,
+            in: .userDomainMask).first!
+    }
+
     private func setupEmptyStoreState() {
         removeStoreArtifacts()
     }
