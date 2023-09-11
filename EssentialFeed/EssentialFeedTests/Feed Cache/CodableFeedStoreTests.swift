@@ -9,7 +9,7 @@
 import XCTest
 import EssentialFeed
 
-class CodableFeedStoreTests: XCTestCase {
+class CodableFeedStoreTests: XCTestCase, FailableFeedStoreSpecs {
     
     override func setUp() {
         super.setUp()
@@ -54,7 +54,7 @@ class CodableFeedStoreTests: XCTestCase {
         expect(sut, toRetrieve: .found(feed: feed, timestamp: timestamp))
         expect(sut, toRetrieve: .found(feed: feed, timestamp: timestamp))
     }
-
+    
     func test_retrieve_deliversFailureOnRetrievalError() {
         let storeURL = testSpecificStoreURL()
         let sut = makeSUT(storeURL: storeURL)
@@ -63,7 +63,7 @@ class CodableFeedStoreTests: XCTestCase {
         
         expect(sut, toRetrieve: .failure(anyNSError()))
     }
-
+    
     func test_retrieve_hasNoSideEffectsOnFailure() {
         let storeURL = testSpecificStoreURL()
         let sut = makeSUT(storeURL: storeURL)
@@ -88,7 +88,7 @@ class CodableFeedStoreTests: XCTestCase {
         expect(sut, toRetrieve: .found(feed: latestFeed, timestamp: latestTimestamp))
     }
     
-    func test_insert_deliverErrorOnInsertionFailure() {
+    func test_insert_deliverErrorOnInsertionError() {
         let invalidStoreURL = URL(string: "invalid://store.url")!
         let sut = makeSUT(storeURL: invalidStoreURL)
         
@@ -96,14 +96,30 @@ class CodableFeedStoreTests: XCTestCase {
         
         XCTAssertNotNil(insertionError, "Expected cache insertion error")
     }
+    
+    func test_insert_hasNoSideEffectsOnInsertionError() {
+        let invalidStoreURL = URL(string: "invalid://store.url")!
+        let sut = makeSUT(storeURL: invalidStoreURL)
+        
+        insert((feed: uniqueImageFeed().local, timestamp: Date()), to: sut)
+        
+        expect(sut, toRetrieve: .empty)
+    }
 
     func test_delete_hasNoSideEffectsOnEmptyCache() {
         let sut = makeSUT()
         
         let deletionError = deleteCache(from: sut)
         
-        XCTAssertNil(deletionError, "Expected empty cache deletion to succeed")
         expect(sut, toRetrieve: .empty)
+    }
+    
+    func test_delete_deliversNoErrorOnEmptyCache() {
+        let sut = makeSUT()
+        
+        let deletionError = deleteCache(from: sut)
+        
+        XCTAssertNil(deletionError, "Expected empty cache deletion to succeed")
     }
 
     func test_delete_emptiesPreviouslyInsertedCache() {
@@ -115,7 +131,7 @@ class CodableFeedStoreTests: XCTestCase {
         XCTAssertNil(deletionError, "Expected non-empty cache deletion to succeed")
         expect(sut, toRetrieve: .empty)
     }
-
+    
     func test_delete_deliversErrorOnDeletionError() {
         let noDeletePermissonURL = cachesDirectory()
         let sut = makeSUT(storeURL: noDeletePermissonURL)
@@ -134,13 +150,13 @@ class CodableFeedStoreTests: XCTestCase {
             completedOperationsInOrder.append(op1)
             op1.fulfill()
         }
-
+        
         let op2 = expectation(description: "Operation 2")
         sut.deleteCachedFeed { _ in
             completedOperationsInOrder.append(op2)
             op2.fulfill()
         }
-
+        
         let op3 = expectation(description: "Operation 3")
         sut.insert(uniqueImageFeed().local, timestamp: Date()) { _ in
             completedOperationsInOrder.append(op3)
@@ -151,7 +167,7 @@ class CodableFeedStoreTests: XCTestCase {
         
         XCTAssertEqual(completedOperationsInOrder, [op1, op2, op3], "Expected cache operations to run serially but get the wrong order")
     }
-
+    
     // MARK: - Helpers
     
     private func makeSUT(storeURL: URL? = nil, file: StaticString = #file, line: UInt = #line) -> FeedStore {
@@ -162,7 +178,7 @@ class CodableFeedStoreTests: XCTestCase {
     
     private func expect(_ sut: FeedStore, toRetrieve expectedResult: RetrieveCachedFeedResult, file: StaticString = #file, line: UInt = #line) {
         let exp = expectation(description: "Wait for cache retrieval")
-
+        
         sut.retrieve { retrievedResult in
             switch (expectedResult, retrievedResult) {
             case (.empty, .empty),
@@ -215,7 +231,7 @@ class CodableFeedStoreTests: XCTestCase {
             for: .cachesDirectory,
             in: .userDomainMask).first!
     }
-
+    
     private func setupEmptyStoreState() {
         removeStoreArtifacts()
     }
