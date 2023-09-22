@@ -10,17 +10,16 @@ import XCTest
 import EssentialFeed
 
 extension FeedStoreSpecs where Self: XCTestCase {
-    func expect(_ sut: FeedStore, toRetrieve expectedResult: RetrieveCachedFeedResult, file: StaticString = #file, line: UInt = #line) {
+    func expect(_ sut: FeedStore, toRetrieve expectedResult: FeedStore.RetrievalResult, file: StaticString = #file, line: UInt = #line) {
         let exp = expectation(description: "Wait for cache retrieval")
         
         sut.retrieve { retrievedResult in
             switch (expectedResult, retrievedResult) {
-            case (.empty, .empty),
+            case (.success(.none), .success(.none)),
                 (.failure, .failure): break
                 
-            case let (.found(expectedFeed, expectedTimestamp), .found(retrievedFeed, retrievedTimestamp)):
+            case let (.success(expectedFeed), .success(retrievedFeed)):
                 XCTAssertEqual(expectedFeed, retrievedFeed)
-                XCTAssertEqual(expectedTimestamp, retrievedTimestamp)
                 
             default:
                 XCTFail("Expected \(expectedResult) result, got \(retrievedResult) instead", file: file, line: line)
